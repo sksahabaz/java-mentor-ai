@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { createStudent, updateStudent, deleteStudent } from "../api.js";
+import { updateMe, deleteMe } from "../api.js";
 import { initials } from "../components/Sidebar.jsx";
-import Logo from "../components/Logo.jsx";
 
 const COURSES = ["Core Java", "Advanced Java", "Spring Boot", "Java Full Stack", "DSA in Java"];
 const LEVELS = [
@@ -12,11 +11,8 @@ const LEVELS = [
 
 const EMPTY = { name: "", email: "", phone: "", course: "Core Java", level: "Beginner" };
 
-// mode="create": onboarding screen (Create)
-// mode="edit":   My Profile page (Read, Update, Delete)
-export default function ProfilePage({ mode, student, onCreated, onSaved, onDeleted }) {
-  const isCreate = mode === "create";
-  const [form, setForm] = useState(isCreate ? EMPTY : { ...EMPTY, ...clean(student) });
+export default function ProfilePage({ student, onSaved, onDeleted }) {
+  const [form, setForm] = useState({ ...EMPTY, ...clean(student) });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -29,7 +25,6 @@ export default function ProfilePage({ mode, student, onCreated, onSaved, onDelet
 
   const validate = () => {
     if (!form.name.trim()) return "Please enter your name.";
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) return "Please enter a valid email.";
     if (form.phone && !/^[0-9+\- ]{7,15}$/.test(form.phone)) return "Phone number looks invalid.";
     return null;
   };
@@ -42,13 +37,9 @@ export default function ProfilePage({ mode, student, onCreated, onSaved, onDelet
     setSaving(true);
     setError(null);
     try {
-      const data = { ...form, name: form.name.trim(), email: form.email.trim() };
-      if (isCreate) {
-        onCreated(await createStudent(data)); // POST /api/students
-      } else {
-        onSaved(await updateStudent(student.id, data)); // PUT /api/students/{id}
-        setSaved(true);
-      }
+      const { name, phone, course, level } = form;
+      onSaved(await updateMe({ name: name.trim(), phone: phone || null, course, level }));
+      setSaved(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -59,7 +50,7 @@ export default function ProfilePage({ mode, student, onCreated, onSaved, onDelet
   const remove = async () => {
     setSaving(true);
     try {
-      await deleteStudent(student.id); // DELETE /api/students/{id} (also deletes quiz history)
+      await deleteMe();
       onDeleted();
     } catch (err) {
       setError(err.message);
@@ -72,11 +63,11 @@ export default function ProfilePage({ mode, student, onCreated, onSaved, onDelet
       <div className="field-row">
         <label>
           Full name *
-          <input value={form.name} onChange={set("name")} placeholder="e.g. Rahul Sharma" autoFocus={isCreate} />
+          <input value={form.name} onChange={set("name")} placeholder="e.g. Rahul Sharma" />
         </label>
         <label>
-          Email *
-          <input type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" />
+          Email
+          <input type="email" value={form.email} disabled />
         </label>
       </div>
       <div className="field-row">
@@ -117,29 +108,11 @@ export default function ProfilePage({ mode, student, onCreated, onSaved, onDelet
       {saved && <div className="alert success">✓ Profile updated</div>}
 
       <button className="btn-primary wide" disabled={saving}>
-        {saving ? "Saving…" : isCreate ? "Create my profile →" : "Save changes"}
+        {saving ? "Saving…" : "Save changes"}
       </button>
     </form>
   );
 
-  // ---------- Create (onboarding) ----------
-  if (isCreate) {
-    return (
-      <div className="onboarding">
-        <div className="onboarding-card">
-          <Logo className="welcome-logo" />
-          <h1>Welcome to JavaMentor AI</h1>
-          <p className="muted">
-            Your personal AI mentor for learning Java from scratch. Create your profile to start chatting,
-            take AI quizzes and track your progress.
-          </p>
-          {formFields}
-        </div>
-      </div>
-    );
-  }
-
-  // ---------- Read / Update / Delete ----------
   return (
     <section className="page">
       <div className="page-inner narrow">
@@ -187,7 +160,6 @@ export default function ProfilePage({ mode, student, onCreated, onSaved, onDelet
   );
 }
 
-// Drop null fields so the defaults in EMPTY are used instead (keeps inputs controlled)
 function clean(s) {
   return Object.fromEntries(Object.entries(s).filter(([, v]) => v !== null && v !== undefined));
 }

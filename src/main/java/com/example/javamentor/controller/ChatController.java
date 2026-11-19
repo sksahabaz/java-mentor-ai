@@ -12,13 +12,8 @@ import com.example.javamentor.dto.ChatRequest;
 import com.example.javamentor.dto.ConceptExplanation;
 import com.example.javamentor.service.ChatService;
 
-/**
- * Controller = HTTP only: read the request, call the service, return the result.
- * Same URLs as before, so index.html and your Postman tests keep working.
- */
 @RestController
 public class ChatController {
-
 	private final ChatService chatService;
 
 	public ChatController(ChatService chatService) {

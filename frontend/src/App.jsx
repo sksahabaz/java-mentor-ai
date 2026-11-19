@@ -4,10 +4,9 @@ import Dashboard from "./pages/Dashboard.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import QuizPage from "./pages/QuizPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
+import AuthPage from "./pages/AuthPage.jsx";
 import useChats from "./hooks/useChats.js";
-import { getStudent } from "./api.js";
-
-const STUDENT_KEY = "javamentor-student-id";
+import { clearAuth, consumeOAuthCallback, getMe, hasSession, logout } from "./api.js";
 
 const TITLES = {
   dashboard: "Dashboard",
@@ -16,13 +15,11 @@ const TITLES = {
   profile: "My Profile",
 };
 
+const oauthResult = consumeOAuthCallback();
+
 export default function App() {
-  // Until login exists, "who am I" = the profile id saved in this browser.
-  // (Register + Login will replace this later.)
   const [student, setStudent] = useState(null);
   const [checking, setChecking] = useState(true);
-  // Current page lives in the URL hash (#dashboard, #chat, #quiz, #profile),
-  // so refresh keeps you on the same page and each page has its own link.
   const [view, setViewState] = useState(() => {
     const fromUrl = window.location.hash.slice(1);
     return TITLES[fromUrl] ? fromUrl : "dashboard";
@@ -34,27 +31,36 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const id = localStorage.getItem(STUDENT_KEY);
-    if (!id) {
+    if (!hasSession()) {
       setChecking(false);
       return;
     }
-    getStudent(id)
+    getMe()
       .then(setStudent)
-      .catch(() => localStorage.removeItem(STUDENT_KEY)) // profile was deleted
+      .catch(() => clearAuth())
       .finally(() => setChecking(false));
   }, []);
 
-  const onProfileCreated = (s) => {
-    localStorage.setItem(STUDENT_KEY, s.id);
-    setStudent(s);
+  useEffect(() => {
+    const onExpired = () => setStudent(null);
+    window.addEventListener("javamentor:logout", onExpired);
+    return () => window.removeEventListener("javamentor:logout", onExpired);
+  }, []);
+
+  const onLoggedIn = async () => {
+    setStudent(await getMe());
     setView("dashboard");
   };
 
+  const onLogout = async () => {
+    await logout();
+    setStudent(null);
+  };
+
   const onProfileDeleted = () => {
-    localStorage.removeItem(STUDENT_KEY);
     localStorage.removeItem(`javamentor-chats-${student.id}`);
     localStorage.removeItem(`javamentor-active-chat-${student.id}`);
+    clearAuth();
     setStudent(null);
   };
 
@@ -66,17 +72,15 @@ export default function App() {
     );
   }
 
-  // No profile yet -> onboarding (create profile)
   if (!student) {
-    return <ProfilePage mode="create" onCreated={onProfileCreated} />;
+    return <AuthPage onLoggedIn={onLoggedIn} oauth={oauthResult} />;
   }
 
   return <Shell student={student} setStudent={setStudent} view={view} setView={setView}
-    sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onDeleted={onProfileDeleted} />;
+    sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onDeleted={onProfileDeleted} onLogout={onLogout} />;
 }
 
-// Separate component so useChats() only runs once a student exists
-function Shell({ student, setStudent, view, setView, sidebarOpen, setSidebarOpen, onDeleted }) {
+function Shell({ student, setStudent, view, setView, sidebarOpen, setSidebarOpen, onDeleted, onLogout }) {
   const chat = useChats(student.id);
 
   return (
@@ -88,6 +92,7 @@ function Shell({ student, setStudent, view, setView, sidebarOpen, setSidebarOpen
         chat={chat}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onLogout={onLogout}
       />
       {sidebarOpen && <div className="backdrop" onClick={() => setSidebarOpen(false)} />}
 
@@ -107,7 +112,7 @@ function Shell({ student, setStudent, view, setView, sidebarOpen, setSidebarOpen
         {view === "chat" && <ChatPage student={student} chat={chat} />}
         {view === "quiz" && <QuizPage student={student} onNavigate={setView} />}
         {view === "profile" && (
-          <ProfilePage mode="edit" student={student} onSaved={setStudent} onDeleted={onDeleted} />
+          <ProfilePage student={student} onSaved={setStudent} onDeleted={onDeleted} />
         )}
       </main>
     </div>

@@ -13,15 +13,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-/**
- * One finished AI quiz = one row in "quiz_attempts".
- * Many attempts belong to one student (@ManyToOne -> foreign key student_id).
- * These rows are the data behind "My Performance".
- */
 @Entity
 @Table(name = "quiz_attempts")
 public class QuizAttempt {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -35,14 +29,13 @@ public class QuizAttempt {
 
 	private String level;
 
-	private int score; // correct answers
+	private int score;
 
-	private int total; // number of questions
+	private int total;
 
 	@Column(nullable = false)
 	private LocalDateTime attemptedAt;
 
-	// Runs automatically just before INSERT
 	@PrePersist
 	void onCreate() {
 		attemptedAt = LocalDateTime.now();

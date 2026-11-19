@@ -1,62 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<!-- 1. Parent: gives versions for ALL Spring Boot libraries -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.1.2</version>
-		<relativePath/>
+		<relativePath />
 	</parent>
 
-	<!-- 2. Your project's identity -->
 	<groupId>com.javamentor</groupId>
 	<artifactId>java-mentor-ai</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>java-mentor-ai</name>
 
-	<!-- 3. Settings reused below -->
 	<properties>
 		<java.version>21</java.version>
 		<spring-ai.version>2.0.1</spring-ai.version>
 	</properties>
 
-	<!-- 4. The libraries your app uses -->
 	<dependencies>
-		<!-- Web: Tomcat + @RestController + @GetMapping -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
-		<!-- Spring AI + Gemini: ChatClient and the Gemini connection -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-client</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-google-genai</artifactId>
 		</dependency>
 
-		<!-- JPA + Hibernate: Student entity, JpaRepository -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 
-		<!-- MySQL JDBC driver: lets Java talk to MySQL -->
 		<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Spring AI chat memory stored in a database (instead of RAM) -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
 		</dependency>
 
-		<!-- DevTools: auto-restart when you save -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -64,7 +75,6 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- Testing (used later) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -72,7 +82,6 @@
 		</dependency>
 	</dependencies>
 
-	<!-- 5. BOM: gives versions for ALL Spring AI libraries -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -85,7 +94,6 @@
 		</dependencies>
 	</dependencyManagement>
 
-	<!-- 6. Build: lets Maven package the app as a runnable jar -->
 	<build>
 		<plugins>
 			<plugin>

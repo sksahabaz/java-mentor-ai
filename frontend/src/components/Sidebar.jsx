@@ -7,8 +7,7 @@ const NAV = [
   { id: "profile", icon: "👤", label: "My Profile" },
 ];
 
-// Left panel: navigation, the chat list (only on the chat page), and the student card.
-export default function Sidebar({ student, view, onViewChange, chat, open, onClose }) {
+export default function Sidebar({ student, view, onViewChange, chat, open, onClose, onLogout }) {
   const go = (id) => {
     onViewChange(id);
     onClose();
@@ -65,7 +64,7 @@ export default function Sidebar({ student, view, onViewChange, chat, open, onClo
                   className="delete-btn"
                   title="Delete chat"
                   onClick={(e) => {
-                    e.stopPropagation(); // don't also open the chat
+                    e.stopPropagation();
                     chat.deleteChat(c.id);
                   }}
                 >
@@ -85,6 +84,9 @@ export default function Sidebar({ student, view, onViewChange, chat, open, onClo
           <strong>{student.name}</strong>
           <small>{student.level || "Beginner"} · {student.course || "Java"}</small>
         </span>
+      </button>
+      <button className="logout-btn" onClick={onLogout}>
+        ⎋ Log out
       </button>
     </aside>
   );

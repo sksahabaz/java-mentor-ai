@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import Markdown from "../components/Markdown.jsx";
 import { getAttempts, getStudyTips } from "../api.js";
 
-// Student dashboard = my performance.
-// One GET /api/quiz/attempts/{id}; every number below is calculated here in React.
 export default function Dashboard({ student, onNavigate }) {
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,8 +11,8 @@ export default function Dashboard({ student, onNavigate }) {
   const [tipsError, setTipsError] = useState(null);
 
   useEffect(() => {
-    getAttempts(student.id)
-      .then(setAttempts) // newest first
+    getAttempts()
+      .then(setAttempts)
       .catch(() => setError("Couldn't load your progress. Is the backend running on port 8080?"))
       .finally(() => setLoading(false));
   }, [student.id]);
@@ -23,7 +21,7 @@ export default function Dashboard({ student, onNavigate }) {
     setTipsLoading(true);
     setTipsError(null);
     try {
-      setTips(await getStudyTips(student.id)); // AI reads my quiz history
+      setTips(await getStudyTips());
     } catch (err) {
       setTipsError(err.message);
     } finally {
@@ -31,14 +29,12 @@ export default function Dashboard({ student, onNavigate }) {
     }
   };
 
-  // ---------- Calculations ----------
   const quizzes = attempts.length;
   const answered = attempts.reduce((sum, a) => sum + a.total, 0);
   const correct = attempts.reduce((sum, a) => sum + a.score, 0);
   const accuracy = answered ? Math.round((correct / answered) * 100) : 0;
   const best = quizzes ? Math.max(...attempts.map((a) => a.percentage)) : 0;
 
-  // Topic -> average %, weakest first
   const topics = Object.values(
     attempts.reduce((acc, a) => {
       const t = (acc[a.topic] ??= { topic: a.topic, score: 0, total: 0, quizzes: 0 });
@@ -51,7 +47,7 @@ export default function Dashboard({ student, onNavigate }) {
     .map((t) => ({ ...t, pct: Math.round((t.score / t.total) * 100) }))
     .sort((a, b) => a.pct - b.pct);
 
-  const trend = attempts.slice(0, 10).reverse(); // last 10, oldest -> newest
+  const trend = attempts.slice(0, 10).reverse();
   const firstName = student.name.split(" ")[0];
 
   return (
@@ -99,7 +95,6 @@ export default function Dashboard({ student, onNavigate }) {
         ) : (
           <>
             <div className="grid-2">
-              {/* Score trend */}
               <div className="card">
                 <div className="card-head">
                   <h3>Score trend</h3>
@@ -118,7 +113,6 @@ export default function Dashboard({ student, onNavigate }) {
                 </div>
               </div>
 
-              {/* Topic performance */}
               <div className="card">
                 <div className="card-head">
                   <h3>Topic performance</h3>
@@ -145,7 +139,6 @@ export default function Dashboard({ student, onNavigate }) {
             </div>
 
             <div className="grid-2">
-              {/* AI study plan */}
               <div className="card tips-card">
                 <div className="card-head">
                   <h3>🤖 AI study plan</h3>
@@ -174,7 +167,6 @@ export default function Dashboard({ student, onNavigate }) {
                 )}
               </div>
 
-              {/* Recent quizzes */}
               <div className="card">
                 <div className="card-head">
                   <h3>Recent quizzes</h3>
