@@ -66,6 +66,10 @@ Beginners learning Java get stuck on small doubts, don't know whether they reall
 
 ## Screenshots
 
+| Log in (email + password or Google) | Register (create your account) |
+|---|---|
+| ![Log in](docs/screenshots/login.png) | ![Register](docs/screenshots/register.png) |
+
 | Dashboard (performance + AI study plan) | AI Mentor Chat |
 |---|---|
 | ![Dashboard](docs/screenshots/dashboard.jpg) | ![AI Mentor Chat](docs/screenshots/chat.jpg) |
@@ -73,10 +77,6 @@ Beginners learning Java get stuck on small doubts, don't know whether they reall
 | AI Quiz (instant feedback) | My Profile |
 |---|---|
 | ![AI Quiz](docs/screenshots/quiz.jpg) | ![My Profile](docs/screenshots/profile.jpg) |
-
-| Onboarding (create profile) |
-|---|
-| ![Onboarding](docs/screenshots/onboarding.jpg) |
 
 ---
 
