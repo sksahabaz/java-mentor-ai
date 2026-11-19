@@ -394,11 +394,6 @@ The full flow (create profile → quiz → dashboard → edit → delete) was al
 
 ---
 
-## Known limitations
-
-- There is **no authentication yet**: the current profile is remembered by its id in the browser's `localStorage`. Login with JWT is the next milestone.
-- A duplicate email currently returns `500` instead of `409`; this will be fixed by the global error handler.
-- AI answers depend on the Gemini API being available, and the free tier has rate limits.
 
 ---
 
