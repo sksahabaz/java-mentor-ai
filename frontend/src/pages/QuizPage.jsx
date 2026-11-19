@@ -11,17 +11,16 @@ const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const COUNTS = [5, 10];
 const LETTERS = ["A", "B", "C", "D"];
 
-// Stages: setup -> loading -> playing -> result
 export default function QuizPage({ student, onNavigate }) {
   const [stage, setStage] = useState("setup");
   const [topic, setTopic] = useState("");
   const [level, setLevel] = useState(student.level || "Beginner");
   const [count, setCount] = useState(5);
   const [quiz, setQuiz] = useState(null);
-  const [index, setIndex] = useState(0); // current question
-  const [answers, setAnswers] = useState([]); // chosen option per question
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState([]);
   const [error, setError] = useState(null);
-  const [saveState, setSaveState] = useState(null); // saving | saved | failed
+  const [saveState, setSaveState] = useState(null);
 
   const start = async (chosenTopic = topic) => {
     const t = chosenTopic.trim();
@@ -30,7 +29,7 @@ export default function QuizPage({ student, onNavigate }) {
     setError(null);
     setStage("loading");
     try {
-      const q = await generateQuiz(t, level, count); // POST /api/quiz/generate
+      const q = await generateQuiz(t, level, count);
       if (!q.questions?.length) throw new Error("The quiz came back empty. Please try again.");
       setQuiz(q);
       setIndex(0);
@@ -43,7 +42,7 @@ export default function QuizPage({ student, onNavigate }) {
   };
 
   const choose = (optionIndex) => {
-    if (answers[index] !== undefined) return; // already answered
+    if (answers[index] !== undefined) return;
     const next = [...answers];
     next[index] = optionIndex;
     setAnswers(next);
@@ -56,11 +55,10 @@ export default function QuizPage({ student, onNavigate }) {
       setIndex(index + 1);
       return;
     }
-    // Last question -> show result and save the score (feeds the Dashboard)
     setStage("result");
     setSaveState("saving");
     try {
-      await saveAttempt({ studentId: student.id, topic, level, score, total: quiz.questions.length });
+      await saveAttempt({ topic, level, score, total: quiz.questions.length });
       setSaveState("saved");
     } catch {
       setSaveState("failed");
@@ -73,7 +71,6 @@ export default function QuizPage({ student, onNavigate }) {
     setSaveState(null);
   };
 
-  // ---------- Setup ----------
   if (stage === "setup") {
     return (
       <section className="page">
@@ -136,7 +133,6 @@ export default function QuizPage({ student, onNavigate }) {
     );
   }
 
-  // ---------- Loading ----------
   if (stage === "loading") {
     return (
       <section className="page">
@@ -151,7 +147,6 @@ export default function QuizPage({ student, onNavigate }) {
     );
   }
 
-  // ---------- Playing ----------
   if (stage === "playing") {
     const q = quiz.questions[index];
     const chosen = answers[index];
@@ -211,7 +206,6 @@ export default function QuizPage({ student, onNavigate }) {
     );
   }
 
-  // ---------- Result ----------
   const total = quiz.questions.length;
   const pct = Math.round((score / total) * 100);
   const verdict =

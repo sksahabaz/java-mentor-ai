@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
 
-// Keeps the list of chats for ONE student in localStorage.
-// The AI's real memory is in MySQL (SPRING_AI_CHAT_MEMORY), linked by the same chat id.
 export default function useChats(studentId) {
   const key = `javamentor-chats-${studentId}`;
 
   const activeKey = `javamentor-active-chat-${studentId}`;
 
   const [chats, setChats] = useState(() => load(key));
-  // The open chat is remembered too, so a page refresh reopens it
   const [activeId, setActiveId] = useState(() => localStorage.getItem(activeKey));
 
-  // Different student -> load their chats
   useEffect(() => {
     setChats(load(key));
     setActiveId(localStorage.getItem(activeKey));
@@ -28,7 +24,7 @@ export default function useChats(studentId) {
 
   const createChat = (firstQuestion) => {
     const chat = {
-      id: crypto.randomUUID(), // 36 chars -> fits conversation_id VARCHAR(36)
+      id: crypto.randomUUID(),
       title: firstQuestion.length > 40 ? firstQuestion.slice(0, 40) + "…" : firstQuestion,
       messages: [],
     };

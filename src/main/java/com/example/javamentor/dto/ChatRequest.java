@@ -1,12 +1,6 @@
 package com.example.javamentor.dto;
 
-/**
- * DTO for chat requests sent as JSON in the request body.
- * Jackson fills it using the no-arg constructor + setters,
- * so the field names must match the JSON keys exactly.
- */
 public class ChatRequest {
-
 	private String conversationId;
 	private String question;
 	private String level;

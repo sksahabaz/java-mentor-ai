@@ -2,7 +2,6 @@ import { useState } from "react";
 import Markdown from "./Markdown.jsx";
 import Logo from "./Logo.jsx";
 
-// One chat bubble. User text is plain; AI answers are Markdown.
 export default function Message({ role, content, error }) {
   const [copied, setCopied] = useState(false);
   const isUser = role === "user";

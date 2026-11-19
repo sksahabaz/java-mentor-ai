@@ -3,8 +3,9 @@ package com.example.javamentor.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,18 +16,12 @@ import com.example.javamentor.dto.Quiz;
 import com.example.javamentor.dto.QuizDtos.AttemptRequest;
 import com.example.javamentor.dto.QuizDtos.AttemptResponse;
 import com.example.javamentor.dto.QuizDtos.GenerateRequest;
+import com.example.javamentor.security.CurrentUser;
 import com.example.javamentor.service.QuizService;
 
-/**
- *   POST /api/quiz/generate            -> AI creates a quiz
- *   POST /api/quiz/attempts            -> save a finished quiz score (201)
- *   GET  /api/quiz/attempts/{studentId} -> my quiz history
- *   GET  /api/quiz/tips/{studentId}    -> AI study tips from my history
- */
 @RestController
 @RequestMapping("/api/quiz")
 public class QuizController {
-
 	private final QuizService quizService;
 
 	public QuizController(QuizService quizService) {
@@ -40,17 +35,17 @@ public class QuizController {
 
 	@PostMapping("/attempts")
 	@ResponseStatus(HttpStatus.CREATED)
-	public AttemptResponse saveAttempt(@RequestBody AttemptRequest req) {
-		return quizService.saveAttempt(req);
+	public AttemptResponse saveAttempt(@AuthenticationPrincipal Jwt jwt, @RequestBody AttemptRequest req) {
+		return quizService.saveAttempt(CurrentUser.studentId(jwt), req);
 	}
 
-	@GetMapping("/attempts/{studentId}")
-	public List<AttemptResponse> attempts(@PathVariable Long studentId) {
-		return quizService.getAttempts(studentId);
+	@GetMapping("/attempts")
+	public List<AttemptResponse> attempts(@AuthenticationPrincipal Jwt jwt) {
+		return quizService.getAttempts(CurrentUser.studentId(jwt));
 	}
 
-	@GetMapping("/tips/{studentId}")
-	public String tips(@PathVariable Long studentId) {
-		return quizService.studyTips(studentId);
+	@GetMapping("/tips")
+	public String tips(@AuthenticationPrincipal Jwt jwt) {
+		return quizService.studyTips(CurrentUser.studentId(jwt));
 	}
 }

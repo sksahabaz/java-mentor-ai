@@ -10,7 +10,6 @@ const SUGGESTIONS = [
   "Why do I get a NullPointerException?",
 ];
 
-// AI Mentor Chat. Chat list state comes from useChats() (shared with the sidebar).
 export default function ChatPage({ student, chat }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +23,6 @@ export default function ChatPage({ student, chat }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, loading]);
 
-  // Auto-grow the textarea (max 200px)
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -42,7 +40,6 @@ export default function ChatPage({ student, chat }) {
     setLoading(true);
 
     try {
-      // level from the profile -> the mentor adapts its explanation
       const answer = await sendMessage(chatId, question, student.level);
       chat.addMessage(chatId, { role: "ai", content: answer });
     } catch (err) {

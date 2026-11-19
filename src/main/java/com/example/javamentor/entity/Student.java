@@ -1,22 +1,24 @@
 package com.example.javamentor.entity;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
-/**
- * JPA entity = one row in the "students" table.
- * Hibernate creates/updates the table from this class (ddl-auto=update).
- */
 @Entity
 @Table(name = "students")
 public class Student {
-
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY) // MySQL AUTO_INCREMENT
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@Column(nullable = false)
@@ -27,9 +29,22 @@ public class Student {
 
 	private String phone;
 
-	private String course; // what they are learning, e.g. "Core Java"
+	private String course;
 
-	private String level; // Beginner / Intermediate / Advanced -> used by the AI
+	private String level;
+
+	@Column(nullable = false)
+	private String password;
+
+	@Column(nullable = false)
+	private boolean enabled = true;
+
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(
+			name = "student_roles",
+			joinColumns = @JoinColumn(name = "student_id"),
+			inverseJoinColumns = @JoinColumn(name = "role_id"))
+	private Set<Role> roles = new HashSet<>();
 
 	public Student() {
 	}
@@ -80,5 +95,29 @@ public class Student {
 
 	public void setCourse(String course) {
 		this.course = course;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public Set<Role> getRoles() {
+		return roles;
+	}
+
+	public void addRole(Role role) {
+		this.roles.add(role);
 	}
 }

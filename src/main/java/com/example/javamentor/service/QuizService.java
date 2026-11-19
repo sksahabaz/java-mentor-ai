@@ -13,16 +13,8 @@ import com.example.javamentor.entity.QuizAttempt;
 import com.example.javamentor.entity.Student;
 import com.example.javamentor.repository.QuizAttemptRepository;
 
-/**
- * AI Quiz + My Performance.
- *   generate()  -> Gemini creates MCQs (structured output)
- *   saveAttempt -> store the score in MySQL
- *   getAttempts -> history for the Performance page
- *   studyTips() -> Gemini reads the history and gives advice
- */
 @Service
 public class QuizService {
-
 	private static final String QUIZ_RULES = """
 			You are JavaMentor AI, writing practice quizzes for students learning Java.
 			Rules:
@@ -48,10 +40,9 @@ public class QuizService {
 	}
 
 	public Quiz generate(String topic, String level, Integer count) {
-		int n = (count == null) ? 5 : Math.max(3, Math.min(count, 10)); // 3..10 questions
+		int n = (count == null) ? 5 : Math.max(3, Math.min(count, 10));
 		String lvl = (level == null || level.isBlank()) ? "beginner" : level;
 
-		// The AI sometimes returns broken JSON or is briefly overloaded -> try up to 3 times
 		RuntimeException lastError = null;
 		for (int attempt = 1; attempt <= 3; attempt++) {
 			try {
@@ -64,7 +55,6 @@ public class QuizService {
 						.call()
 						.entity(Quiz.class);
 
-				// Never trust AI output blindly: drop broken questions
 				List<Quiz.Question> valid = quiz.questions().stream()
 						.filter(q -> q.options() != null && q.options().size() == 4)
 						.filter(q -> q.correctIndex() >= 0 && q.correctIndex() < 4)
@@ -79,8 +69,9 @@ public class QuizService {
 		throw new IllegalStateException("AI could not create a quiz. Please try again.", lastError);
 	}
 
-	public AttemptResponse saveAttempt(AttemptRequest req) {
-		Student student = studentService.getById(req.studentId()); // 404 if unknown
+	public AttemptResponse saveAttempt(Long studentId, AttemptRequest req) {
+		Student student = studentService.getById(studentId);
+
 		QuizAttempt a = new QuizAttempt();
 		a.setStudent(student);
 		a.setTopic(req.topic());
@@ -91,7 +82,7 @@ public class QuizService {
 	}
 
 	public List<AttemptResponse> getAttempts(Long studentId) {
-		studentService.getById(studentId); // 404 if unknown
+		studentService.getById(studentId);
 		return attemptRepository.findByStudentIdOrderByAttemptedAtDesc(studentId).stream()
 				.map(AttemptResponse::from)
 				.toList();
@@ -104,7 +95,6 @@ public class QuizService {
 			return "Take your first AI quiz, and I'll give you personal study tips based on your results.";
 		}
 
-		// Turn the history into plain text lines the model can read
 		String history = attempts.stream()
 				.limit(30)
 				.map(a -> "- %s (%s): %d/%d = %d%%".formatted(a.topic(), a.level(), a.score(), a.total(), a.percentage()))

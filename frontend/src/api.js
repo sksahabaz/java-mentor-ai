@@ -1,61 +1,167 @@
-// All backend calls live here. Pages never call fetch() directly.
-// Vite proxies /chat and /api to Spring Boot on port 8080 (see vite.config.js).
-
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const AUTH_KEY = "javamentor-auth";
+export const BACKEND_ORIGIN = "http://localhost:8080";
+export const GOOGLE_LOGIN_URL = `${BACKEND_ORIGIN}/oauth2/authorization/google`;
+export const GOOGLE_REGISTER_URL = `${GOOGLE_LOGIN_URL}?mode=register`;
 
-// Turns an HTTP error status into a message a student understands
-async function handle(res) {
-  if (res.ok) {
-    return res.status === 204 ? null : res.json(); // 204 = deleted, no body
+let refreshPromise = null;
+
+function loadAuth() {
+  try {
+    return JSON.parse(localStorage.getItem(AUTH_KEY));
+  } catch {
+    return null;
   }
-  if (res.status === 404) throw new Error("Profile not found.");
-  if (res.status === 400) throw new Error("Some details are invalid. Please check the form.");
-  // Duplicate email hits the UNIQUE constraint in MySQL -> backend returns 500 for now
-  if (res.status === 500) throw new Error("Something went wrong. This email may already be registered.");
-  throw new Error(`Request failed (${res.status}).`);
 }
 
-// ---------- AI Chat ----------
-// POST /chat/memory -> ChatService.chatWithMemory() (memory stored in MySQL)
-export async function sendMessage(conversationId, question, level) {
-  const res = await fetch("/chat/memory", {
+export function saveAuth(accessToken, refreshToken) {
+  localStorage.setItem(AUTH_KEY, JSON.stringify({ accessToken, refreshToken }));
+}
+
+export function clearAuth() {
+  localStorage.removeItem(AUTH_KEY);
+}
+
+export function hasSession() {
+  return !!loadAuth()?.refreshToken;
+}
+
+async function errorMessage(res) {
+  try {
+    const body = await res.json();
+    const fieldErrors = body.errors ? Object.values(body.errors) : [];
+    if (fieldErrors.length) return fieldErrors.join(" ");
+    if (body.message) return body.message;
+  } catch {
+  }
+  return `Request failed (${res.status}).`;
+}
+
+async function parse(res, as) {
+  if (!res.ok) throw new Error(await errorMessage(res));
+  if (res.status === 204) return null;
+  return as === "text" ? res.text() : res.json();
+}
+
+async function refreshTokens() {
+  const auth = loadAuth();
+  if (!auth?.refreshToken) throw new Error("Not logged in");
+  const res = await fetch("/api/auth/refresh", {
     method: "POST",
     headers: JSON_HEADERS,
-    body: JSON.stringify({ conversationId, question, level }),
+    body: JSON.stringify({ refreshToken: auth.refreshToken }),
   });
-  if (!res.ok) throw new Error(`Server error ${res.status}`);
-  return res.text(); // Markdown
+  if (!res.ok) throw new Error("Session expired");
+  const data = await res.json();
+  saveAuth(data.accessToken, data.refreshToken);
 }
 
-// ---------- My Profile (StudentController /api/students) ----------
-export const getStudent = (id) => fetch(`/api/students/${id}`).then(handle);
+function sessionExpired() {
+  clearAuth();
+  window.dispatchEvent(new Event("javamentor:logout"));
+  throw new Error("Your session has expired. Please log in again.");
+}
 
-export const createStudent = (student) =>
-  fetch("/api/students", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(student) }).then(handle);
+async function request(url, { method = "GET", body, as = "json" } = {}) {
+  const send = () => {
+    const headers = body !== undefined ? { ...JSON_HEADERS } : {};
+    const token = loadAuth()?.accessToken;
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(url, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+  };
 
-export const updateStudent = (id, student) =>
-  fetch(`/api/students/${id}`, { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(student) }).then(handle);
+  let res = await send();
+  if (res.status === 401 && hasSession()) {
+    try {
+      refreshPromise ??= refreshTokens().finally(() => (refreshPromise = null));
+      await refreshPromise;
+    } catch {
+      sessionExpired();
+    }
+    res = await send();
+    if (res.status === 401) sessionExpired();
+  }
+  return parse(res, as);
+}
 
-export const deleteStudent = (id) => fetch(`/api/students/${id}`, { method: "DELETE" }).then(handle);
-
-// ---------- AI Quiz + performance (QuizController /api/quiz) ----------
-export async function generateQuiz(topic, level, count) {
-  const res = await fetch("/api/quiz/generate", {
+export async function login(email, password) {
+  const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: JSON_HEADERS,
-    body: JSON.stringify({ topic, level, count }),
+    body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) throw new Error("JavaMentor couldn't create this quiz. Please try again.");
-  return res.json(); // { topic, questions: [{ question, options[4], correctIndex, explanation }] }
+  const data = await parse(res);
+  saveAuth(data.accessToken, data.refreshToken);
 }
 
-export const saveAttempt = (attempt) =>
-  fetch("/api/quiz/attempts", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(attempt) }).then(handle);
-
-export const getAttempts = (studentId) => fetch(`/api/quiz/attempts/${studentId}`).then(handle);
-
-export async function getStudyTips(studentId) {
-  const res = await fetch(`/api/quiz/tips/${studentId}`);
-  if (!res.ok) throw new Error("Couldn't get your study plan right now. Please try again.");
-  return res.text(); // Markdown
+export async function register(form) {
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(form),
+  });
+  await parse(res);
+  await login(form.email, form.password);
 }
+
+export async function logout() {
+  const refreshToken = loadAuth()?.refreshToken;
+  clearAuth();
+  if (refreshToken) {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ refreshToken }),
+    }).catch(() => {});
+  }
+}
+
+export function consumeOAuthCallback() {
+  if (window.location.pathname !== "/oauth2/callback") return null;
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  window.history.replaceState(null, "", "/#dashboard");
+  const accessToken = params.get("token");
+  const refreshToken = params.get("refreshToken");
+  if (accessToken && refreshToken) {
+    saveAuth(accessToken, refreshToken);
+    return null;
+  }
+  const error = params.get("error");
+  if (error === "not_registered") {
+    const email = params.get("email") ?? "";
+    return {
+      mode: "register",
+      email,
+      message: `No account found for ${email}. Click "Sign up with Google" below, or register with a password.`,
+    };
+  }
+  if (error === "already_registered") {
+    const email = params.get("email") ?? "";
+    return {
+      mode: "login",
+      email,
+      message: `${email} is already registered. Please log in.`,
+    };
+  }
+  if (error === "email_not_verified") return { message: "Your Google email is not verified." };
+  if (error === "account_disabled") return { message: "Your account is disabled." };
+  return { message: "Google sign-in failed. Please try again." };
+}
+
+export const sendMessage = (conversationId, question, level) =>
+  request("/chat/memory", { method: "POST", body: { conversationId, question, level }, as: "text" });
+
+export const getMe = () => request("/api/students/me");
+
+export const updateMe = (profile) => request("/api/students/me", { method: "PUT", body: profile });
+
+export const deleteMe = () => request("/api/students/me", { method: "DELETE" });
+
+export const generateQuiz = (topic, level, count) =>
+  request("/api/quiz/generate", { method: "POST", body: { topic, level, count } });
+
+export const saveAttempt = (attempt) => request("/api/quiz/attempts", { method: "POST", body: attempt });
+
+export const getAttempts = () => request("/api/quiz/attempts");
+
+export const getStudyTips = () => request("/api/quiz/tips", { as: "text" });

@@ -7,14 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.javamentor.dto.ConceptExplanation;
 
-/**
- * Service layer for everything AI.
- * The controller only handles HTTP; all Spring AI logic lives here.
- */
 @Service
 public class ChatService {
-
-	// One place for the trainer rules, reused by several methods
 	private static final String JAVA_TRAINER_RULES = """
 			You are a friendly Core Java trainer for beginner students.
 			Explain every concept in this order:
@@ -26,8 +20,6 @@ public class ChatService {
 			If the question is not about programming, politely say you only help with Java.
 			""";
 
-	// JavaMentor AI's personality, used by the React chat (/chat/memory).
-	// {level} is filled with the student's level from their profile.
 	private static final String MENTOR_RULES = """
 			You are JavaMentor AI, a patient and encouraging mentor for students
 			learning Java from scratch. The student's level is: {level}.
@@ -58,13 +50,11 @@ public class ChatService {
 	private final ChatClient chatClient;
 	private final MessageChatMemoryAdvisor memoryAdvisor;
 
-	// ChatMemory now stores its messages in MySQL (JDBC chat memory repository)
 	public ChatService(ChatClient.Builder builder, ChatMemory chatMemory) {
 		this.chatClient = builder.build();
 		this.memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
 	}
 
-	/** Plain question, no rules, no memory. */
 	public String ask(String question) {
 		return chatClient.prompt()
 				.user(question)
@@ -72,7 +62,6 @@ public class ChatService {
 				.content();
 	}
 
-	/** System prompting: answer follows the trainer rules. */
 	public String askAsTrainer(String question) {
 		return chatClient.prompt()
 				.system(JAVA_TRAINER_RULES)
@@ -81,7 +70,6 @@ public class ChatService {
 				.content();
 	}
 
-	/** Template prompting: {topic} and {level} filled at runtime. */
 	public String explainTopic(String topic, String level) {
 		return chatClient.prompt()
 				.user(u -> u.text("Explain {topic} for a {level} level student.")
@@ -91,7 +79,6 @@ public class ChatService {
 				.content();
 	}
 
-	/** System + template prompting together. */
 	public String explainTopicAsTrainer(String topic, String level) {
 		return chatClient.prompt()
 				.system(SHORT_TRAINER_RULES)
@@ -102,7 +89,6 @@ public class ChatService {
 				.content();
 	}
 
-	/** Chat with memory: earlier messages of this conversation are loaded from MySQL. */
 	public String chatWithMemory(String conversationId, String question, String level) {
 		String lvl = (level == null || level.isBlank()) ? "Beginner" : level;
 		return chatClient.prompt()
@@ -114,7 +100,6 @@ public class ChatService {
 				.content();
 	}
 
-	/** Structured output: Gemini fills a ConceptExplanation object. */
 	public ConceptExplanation explainStructured(String question, String level) {
 		return chatClient.prompt()
 				.system("You are a friendly Core Java trainer. Always use Java.")
